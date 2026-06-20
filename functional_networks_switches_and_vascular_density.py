@@ -4,78 +4,9 @@ import nibabel as nb
 import statsmodels.api as sm
 import nigsp as ng
 from nibabel.funcs import concat_images
-import pyvane as pv
 import networkx as nx
 import scipy.ndimage as ndi
 import matplotlib.pyplot as plt
-
-def main ():
-    
-    # fMRI data processing for functional networks and switching rates
-    no_subjects = 6
-    no_sessions = 6
-    subjects = [f"{i:02d}" for i in range(1, no_subjects + 1)]
-    sessions = [str(i) for i in range(1, no_sessions + 1)]
-
-    fmri_base_directory = "/fmri_data" # replace with real path
-    fmri_output_directory = "/fmri_data/concatenated" # replace with real path
-
-    concatenated_files = read_and_concatenate_subject_sessions(fmri_base_directory, fmri_output_directory, subjects, sessions)
-
-    rate_ecn_dna_array = []
-    rate_ecn_dnb_array = []
-   
-    for filename in concatenated_files:
-        rate_ecn_dna, rate_ecn_dnb = maps_and_rates(filename, [0,0,0], [0,0,0], [0,0,0]) # replace seed_location_ecn, seed_location_dna, seed_location_dnb with real values
-        rate_ecn_dna_array.append(rate_ecn_dna)
-        rate_ecn_dnb_array.append(rate_ecn_dnb)
-
-    # Plotting the time-series with triggers for subject 1
-    example_file = concatenated_files[0]
-    
-    _, _, seed_data_ecn, seed_data_dna, seed_data_dnb, pp_seed_data_ecn, pp_seed_data_dna, pp_seed_data_dnb = maps_and_rates(example_file, [0,0,0], [0,0,0], [0,0,0]) # replace seed_location_ecn, seed_location_dna, seed_location_dnb with real values
-    
-    ecn_indices = np.where(pp_seed_data_ecn == 1)[0]
-    dna_indices = np.where(pp_seed_data_dna == 1)[0]
-    dnb_indices = np.where(pp_seed_data_dnb == 1)[0]
-
-    time = np.arange(len(seed_data_ecn)) * 2.0 # Replace with real TR
-
-    plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices, dna_indices, dnb_indices) # replace with real data
-
-    #MRI data processing for vascular density
-    mri_base_directory = "/mri_data" # replace with real path
-
-    density_array = []
-
-    for sub in subjects:
-        # Construct the target standardized filename
-        file_name = f"sub-{sub}_mri.nii.gz"
-        
-        # Combine the base folder path with the filename
-        full_path = os.path.abspath(os.path.join(mri_base_directory, file_name))
-        
-        data, mask, img = ng.load_nifti_get_mask(full_path)
-        
-        # Not sure how to use these
-        data_masked = ng.apply_mask(data, mask)
-        parcels = ng.apply_atlas(data, atlas)
-        
-        # Needs a graph?
-        density = pv.vessel_density(graph, img.shape)
-        density_array.append(density)
-
-    # Regression analysis between switching rates and vascular density
-    metrics_ecn_dna = perform_linear_regression(density_array, rate_ecn_dna_array)
-    print_regression_metrics(metrics_ecn_dna, label=f"ECN-DNA")
-    
-    metrics_ecn_dnb = perform_linear_regression(density_array, rate_ecn_dnb_array)
-    print_regression_metrics(metrics_ecn_dnb, label=f"ECN-DNB")
-
-    plot_linear_regression(density_array, rate_ecn_dna_array, metrics_ecn_dna, title="Linear Regression: Density vs ECN-DNA Switching Rate")
-    plot_linear_regression(density_array, rate_ecn_dnb_array, metrics_ecn_dnb, title="Linear Regression: Density vs ECN-DNB Switching Rate")
-
-    return 
 
 def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, session_ids):
     """
@@ -141,6 +72,35 @@ def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, ses
     # Return the completed array of file paths
     return saved_paths
 
+# THE FOLLOWING CODE IS USED UNDER THE BSD 3-CLAUSE LICENSE
+# Copyright (c) 2014, Child Mind Institute, Inc. and C-PAC developers
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 # Point process analysis for a signal. Values equal to 1 when the original value 
 # is higher than the threshold (1.5*SD)
 def point_process(signal):
@@ -188,6 +148,74 @@ def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_
     rate_ecn_dnb = np.count_nonzero((pp_seed_data_ecn[:-1] + pp_seed_data_dnb[1:]) == 2)
     
     return rate_ecn_dna, rate_ecn_dnb, seed_data_ecn, seed_data_dna, seed_data_dnb, pp_seed_data_ecn, pp_seed_data_dna, pp_seed_data_dnb
+
+def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices, dna_indices, dnb_indices):
+    """
+    Generates a 3-panel synchronized time-series plot with trigger arrows, 
+    significance markers (*), and vertical alignment guidelines.
+    """
+    # Create a 3-row synchronized figure sharing the exact same X-axis
+    fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True, dpi=150)
+    
+    # Define styling profiles
+    line_props = dict(marker='o', markersize=3, markerfacecolor='white', linewidth=1, alpha=0.7)
+    dash_style = dict(color='gray', linestyle='--', linewidth=1, alpha=0.6)
+
+    # PANEL 1: ECN Time-Series (Top Channel)
+    threshold = np.std(seed_data_ecn) * 1.5    
+    axes[0].plot(time, seed_data_ecn, color='royalblue', label='ECN', **line_props)
+    axes[0].set_ylabel('ECN', fontsize=12, fontweight='bold')
+    axes[0].axhline(threshold, color='black', linestyle='--')
+    axes[0].text(605, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    
+    # Overlay trigger arrows at specific time points
+    for t_idx in ecn_indices:
+        axes[0].annotate('', xy=(time[t_idx], 2.2), xytext=(time[t_idx], 4.0),
+                         arrowprops=dict(facecolor='black', arrowstyle='->', lw=2))
+        
+    # PANEL 2: DNA Time-Series (Middle Channel)
+    threshold = np.std(seed_data_dna) * 1.5
+    axes[1].plot(time, seed_data_dna, color='crimson', label='DNA', **line_props)
+    axes[1].set_ylabel('DNA', fontsize=12, fontweight='bold')
+    axes[1].axhline(threshold, color='black', linestyle='--')
+    axes[1].text(605, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    
+    # Overlay asterisks for DNA
+    for t_idx in dna_indices:
+        axes[1].text(time[t_idx], 1.5, '*', fontsize=18, fontweight='bold', ha='center')
+
+    # PANEL 3: DNB Time-Series (Bottom Channel)
+    threshold = np.std(seed_data_dnb) * 1.5
+    axes[2].plot(time, seed_data_dnb, color='lightcoral', label='DNB', **line_props)
+    axes[2].set_ylabel('DNB', fontsize=12, fontweight='bold')
+    axes[2].axhline(threshold, color='black', linestyle='--')
+    axes[2].text(605, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    
+    # Overlay asterisks for DNB
+    for t_idx in dnb_indices:
+        axes[2].text(time[t_idx], 1.5, '*', fontsize=18, fontweight='bold', ha='center')
+        
+
+    # GLOBAL FORMATTING & VERTICAL ALIGNMENT LINES
+    # Draw vertical dashed alignment markers across all subplots at trigger events
+    all_events = sorted(list(set(ecn_indices + dna_indices + dnb_indices)))
+    for ax in axes:
+        ax.set_ylim(-4.5, 4.5)           # check maximum and minimum z-scores
+        ax.set_yticks([-4, -2, 0, 2, 4]) # check maximum and minimum z-scores 
+        ax.grid(False)
+        # Apply the vertical line spans across panels
+        for t_idx in all_events:
+            ax.axvline(x=time[t_idx], **dash_style)
+            
+    # Set shared X-axis parameters
+    axes[2].set_xlabel('Time (sec)', fontsize=12)
+    axes[2].set_xlim(0, 0) # multiply the total number of volumes in the concatenated file by the scan's TR for the maximum limit
+    
+    # Add a unified Y axis label text block on the left
+    fig.text(0.02, 0.5, 'BOLD (z)', va='center', rotation='vertical', fontsize=12, fontweight='bold')
+    
+    plt.tight_layout(rect=[0.04, 0, 0.95, 1])
+    plt.show()
 
 def perform_linear_regression(x, y):
     """
@@ -259,6 +287,7 @@ def print_regression_metrics(metrics_dict, label="Dataset"):
     print(f" R² Accuracy:    {metrics_dict['r_squared']:.4f} ({metrics_dict['r_squared']*100:.1f}%)")
     print(f" RMSE Error:     {metrics_dict['rmse']:.4f}")
     print(f"====================================\n")
+    return metrics_dict
 
 def plot_linear_regression(x, y, regression_results, title="Linear Regression Plot"):
     """
@@ -313,73 +342,87 @@ def plot_linear_regression(x, y, regression_results, title="Linear Regression Pl
     plt.tight_layout()
     plt.show()
 
-def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices, dna_indices, dnb_indices):
-    """
-    Generates a 3-panel synchronized time-series plot with trigger arrows, 
-    significance markers (*), and vertical alignment guidelines.
-    """
-    # Create a 3-row synchronized figure sharing the exact same X-axis
-    fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True, dpi=150)
-    
-    # Define styling profiles
-    line_props = dict(marker='o', markersize=3, markerfacecolor='white', linewidth=1, alpha=0.7)
-    dash_style = dict(color='gray', linestyle='--', linewidth=1, alpha=0.6)
+def density (brain_mask_path, vessel_mask_path):
+    _, brain_mask, _ = ng.load_nifti_get_mask(brain_mask_path, is_mask=True, ndim=3)
+    brain_mask_voxels = np.sum(brain_mask)
 
-    # PANEL 1: ECN Time-Series (Top Channel)
-    threshold = np.std(seed_data_ecn) * 1.5    
-    axes[0].plot(time, seed_data_ecn, color='royalblue', label='ECN', **line_props)
-    axes[0].set_ylabel('ECN', fontsize=12, fontweight='bold')
-    axes[0].axhline(threshold, color='black', linestyle='--')
-    axes[0].text(605, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    _, vessel_mask, _ = ng.load_nifti_get_mask(vessel_mask_path, is_mask=True, ndim=3)
+    vessel_mask_voxels = np.sum(vessel_mask)
+
+    vascular_density = vessel_mask_voxels / brain_mask_voxels
+
+    return brain_mask_voxels, vessel_mask_voxels, vascular_density
+
+def main ():
     
-    # Overlay trigger arrows at specific time points
-    for t_idx in ecn_indices:
-        axes[0].annotate('', xy=(time[t_idx], 2.2), xytext=(time[t_idx], 4.0),
-                         arrowprops=dict(facecolor='black', arrowstyle='->', lw=2))
+    # fMRI data concatenation and processing for functional networks and switching rates
+    no_subjects = 6
+    no_sessions = 6
+    subjects = [f"{i:02d}" for i in range(1, no_subjects + 1)]
+    sessions = [str(i) for i in range(1, no_sessions + 1)]
+
+    fmri_base_directory = "/fmri_data" # replace with real path
+    fmri_output_directory = "/fmri_data/concatenated" # replace with real path
+
+    concatenated_files = read_and_concatenate_subject_sessions(fmri_base_directory, fmri_output_directory, subjects, sessions)
+
+    rate_ecn_dna_array = []
+    rate_ecn_dnb_array = []
+   
+    for filename in concatenated_files:
+        rate_ecn_dna, rate_ecn_dnb = maps_and_rates(filename, [0,0,0], [0,0,0], [0,0,0])[:2] # replace seed_location_ecn, seed_location_dna, seed_location_dnb with real values
+        rate_ecn_dna_array.append(rate_ecn_dna)
+        rate_ecn_dnb_array.append(rate_ecn_dnb)
+
+    # Plotting the time-series with triggers
+    for sub in subjects:
+        concat_file = concatenated_files[sub]
         
-    # PANEL 2: DNA Time-Series (Middle Channel)
-    threshold = np.std(seed_data_dna) * 1.5
-    axes[1].plot(time, seed_data_dna, color='crimson', label='DNA', **line_props)
-    axes[1].set_ylabel('DNA', fontsize=12, fontweight='bold')
-    axes[1].axhline(threshold, color='black', linestyle='--')
-    axes[1].text(605, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
-    
-    # Overlay asterisks for DNA
-    for t_idx in dna_indices:
-        axes[1].text(time[t_idx], 1.5, '*', fontsize=18, fontweight='bold', ha='center')
-
-    # PANEL 3: DNB Time-Series (Bottom Channel)
-    threshold = np.std(seed_data_dnb) * 1.5
-    axes[2].plot(time, seed_data_dnb, color='lightcoral', label='DNB', **line_props)
-    axes[2].set_ylabel('DNB', fontsize=12, fontweight='bold')
-    axes[2].axhline(threshold, color='black', linestyle='--')
-    axes[2].text(605, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
-    
-    # Overlay asterisks for DNB
-    for t_idx in dnb_indices:
-        axes[2].text(time[t_idx], 1.5, '*', fontsize=18, fontweight='bold', ha='center')
+        _, _, seed_data_ecn, seed_data_dna, seed_data_dnb, pp_seed_data_ecn, pp_seed_data_dna, pp_seed_data_dnb = maps_and_rates(concat_file, [0,0,0], [0,0,0], [0,0,0]) # replace seed_location_ecn, seed_location_dna, seed_location_dnb with real values
         
+        ecn_indices = np.where(pp_seed_data_ecn == 1)[sub]
+        dna_indices = np.where(pp_seed_data_dna == 1)[sub]
+        dnb_indices = np.where(pp_seed_data_dnb == 1)[sub]
 
-    # GLOBAL FORMATTING & VERTICAL ALIGNMENT LINES
-    # Draw vertical dashed alignment markers across all subplots at trigger events
-    all_events = sorted(list(set(ecn_indices + dna_indices + dnb_indices)))
-    for ax in axes:
-        ax.set_ylim(-4.5, 4.5)           # check maximum and minimum z-scores
-        ax.set_yticks([-4, -2, 0, 2, 4]) # check maximum and minimum z-scores 
-        ax.grid(False)
-        # Apply the vertical line spans across panels
-        for t_idx in all_events:
-            ax.axvline(x=time[t_idx], **dash_style)
-            
-    # Set shared X-axis parameters
-    axes[2].set_xlabel('Time (sec)', fontsize=12)
-    axes[2].set_xlim(0, 0) # multiply the total number of volumes in the concatenated file by the scan's TR for the maximum limit
+        time = np.arange(len(seed_data_ecn)) * 2.0 # Replace with real TR
+
+        plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices, dna_indices, dnb_indices) # replace with real data
+
+    #MRI data processing for vascular density
+    vessel_segmentation_directory = "/Neurodata/M3PI/derivatives/vessels/segmentations/prediction/"
+   
+    density_array = []
+
+    print("====================================")
+
+    for sub in subjects:
+        mri_base_directory = f"/Neurodata/M3PI/derivatives/vessels/sub-{sub}/ses-7T/anat/"
+        file_name_brain = f"00.sub-{sub}_ses-7T_part-mag_T2starw_brain_mask.nii.gz"
+        full_path_brain = os.path.abspath(os.path.join(mri_base_directory, file_name_brain))
+
+        file_name_vessel = f"sub-{sub}_ses-7T_part-mag_T2starw_imgavg_preprocessed_bfcvb_brain.nii.gz"
+        full_path_vessel = os.path.abspath(os.path.join(vessel_segmentation_directory, file_name_vessel))
+        
+        brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_brain, full_path_vessel)
+        density_array.append(vascular_density)
+
+        print(f"Subject {sub}")
+        print(f"Total Brain Voxels : {brain_mask_voxels}")
+        print(f"Total Vessel Voxels Subject : {vessel_mask_voxels}")
+        print(f"Calculated Whole-Brain Vascular Density Subject : {vascular_density:.6f}")
+        print("====================================")
+
+    # Regression analysis between switching rates and vascular density
+    metrics_ecn_dna = perform_linear_regression(density_array, rate_ecn_dna_array)
+    print_regression_metrics(metrics_ecn_dna, label=f"ECN-DNA")
     
-    # Add a unified Y axis label text block on the left
-    fig.text(0.02, 0.5, 'BOLD (z)', va='center', rotation='vertical', fontsize=12, fontweight='bold')
-    
-    plt.tight_layout(rect=[0.04, 0, 0.95, 1])
-    plt.show()
+    metrics_ecn_dnb = perform_linear_regression(density_array, rate_ecn_dnb_array)
+    print_regression_metrics(metrics_ecn_dnb, label=f"ECN-DNB")
+
+    plot_linear_regression(density_array, rate_ecn_dna_array, metrics_ecn_dna, title="Linear Regression: Density vs ECN-DNA Switching Rate")
+    plot_linear_regression(density_array, rate_ecn_dnb_array, metrics_ecn_dnb, title="Linear Regression: Density vs ECN-DNB Switching Rate")
+
+    return 
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,6 @@ Bootstrap: docker
 From: ubuntu:22.04
 
 %arguments
-UBUNTU_VER=22.04
 R_VER=4.3.2-1.2204.0
 AFNI_VER=24.0.00
 ANTS_VER=2.5.0

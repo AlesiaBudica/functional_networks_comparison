@@ -7,6 +7,35 @@ from nibabel.funcs import concat_images
 import networkx as nx
 import scipy.ndimage as ndi
 import matplotlib.pyplot as plt
+from statsmodels.iolib.table import SimpleTable
+from statsmodels.iolib.table import default_txt_fmt
+
+def load_subject_seeds(seed_file_path):
+    """
+    Reads a comma-separated file containing subject-specific seed coordinates.
+    Returns a dictionary mapping subject ID to their network coordinates.
+    """
+    subject_seeds = {}
+    with open(seed_file_path, 'r') as f:
+        for line in f:
+            # Skip comments or empty lines
+            if line.startswith('#') or not line.strip():
+                continue
+            
+            parts = [p.strip() for p in line.split(',')]
+            sub = parts[0]
+            
+            # Extract coordinates as integer integers
+            ecn = [int(parts[1]), int(parts[2]), int(parts[3])]
+            dna = [int(parts[4]), int(parts[5]), int(parts[6])]
+            dnb = [int(parts[7]), int(parts[8]), int(parts[9])]
+            
+            subject_seeds[sub] = {
+                'ecn': ecn,
+                'dna': dna,
+                'dnb': dnb
+            }
+    return subject_seeds
 
 def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, session_ids):
     """
@@ -73,39 +102,11 @@ def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, ses
     return saved_paths
 
 # THE FOLLOWING CODE IS USED UNDER THE BSD 3-CLAUSE LICENSE
-# Copyright (c) 2014, Child Mind Institute, Inc. and C-PAC developers
-# All rights reserved.
-
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-
-# 1. Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer.
-
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-
-# 3. Neither the name of the copyright holder nor the names of its contributors
-# may be used to endorse or promote products derived from this software without
-# specific prior written permission.
-
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 # Point process analysis for a signal. Values equal to 1 when the original value 
 # is higher than the threshold (1.5*SD)
 def point_process(signal):
 
-    pp_signal = np.zeros(signal.shape[0])
+    pp_signal = np.zeros_like(signal)
     th = np.std(signal) * 1.5
 
     pp_signal[signal > th] = 1
@@ -113,12 +114,12 @@ def point_process(signal):
     return pp_signal
 
 # Given an fMRI, extract timeseries, calculate Point Process and then the Rate and Map for each voxel given a seed
-def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_dnb, map_ecn_file_name = 'map_ecn', map_dna_file_name = 'map_dna', map_dnb_file_name = 'map_dnb'):
+def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_dnb, outdir, sub, map_ecn_file_name = 'map_ecn', map_dna_file_name = 'map_dna', map_dnb_file_name = 'map_dnb'):
 
     # Treat fMRI image
     data, mask, img = ng.load_nifti_get_mask(in_file)
 
-    # Extract seed and apply pp for the 3 networks
+    # Extract seed and apply PP for the 3 networks
     seed_data_ecn = data[seed_location_ecn[0], seed_location_ecn[1], seed_location_ecn[2],:]
     pp_seed_data_ecn = point_process(seed_data_ecn)
 
@@ -129,27 +130,30 @@ def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_
     pp_seed_data_dnb = point_process(seed_data_dnb)
    
     # Map and switch rates
-    map_ecn = data[..., pp_seed_data_ecn != 0].mean(axis=-1)
     # Save map_ecn
-    ng.export_nifti(map_ecn, img, map_ecn_file_name)
-    print(f"Success! Map ecn saved to: {map_ecn_file_name}")
+    map_ecn = data[..., pp_seed_data_ecn != 0].mean(axis=-1)
+    map_ecn_file_path = f'{outdir}/{map_ecn_file_name}_sub-{sub}.nii.gz'
+    ng.export_nifti(map_ecn, img, map_ecn_file_path)
+    print(f"Success! Map ECN saved to: {map_ecn_file_path}")
 
-    map_dna = data[..., pp_seed_data_dna != 0].mean(axis=-1)
     # Save map_dna
-    ng.export_nifti(map_dna, img, map_dna_file_name)
-    print(f"Success! Map dna saved to: {map_dna_file_name}")
+    map_dna = data[..., pp_seed_data_dna != 0].mean(axis=-1)
+    map_dna_file_path = f'{outdir}/{map_dna_file_name}_sub-{sub}.nii.gz'
+    ng.export_nifti(map_dna, img, map_dna_file_path)
+    print(f"Success! Map DNA saved to: {map_dna_file_path}")
 
-    map_dnb = data[..., pp_seed_data_dnb != 0].mean(axis=-1)
     # Save map_dnb
-    ng.export_nifti(map_dnb, img, map_dnb_file_name)
-    print(f"Success! Map dnb saved to: {map_dnb_file_name}")
+    map_dnb = data[..., pp_seed_data_dnb != 0].mean(axis=-1)
+    map_dnb_file_path = f'{outdir}/{map_dnb_file_name}_sub-{sub}.nii.gz'
+    ng.export_nifti(map_dnb, img, map_dnb_file_path)
+    print(f"Success! Map DNB saved to: {map_dnb_file_path}")
 
     rate_ecn_dna = np.count_nonzero((pp_seed_data_ecn[:-1] + pp_seed_data_dna[1:]) == 2)
     rate_ecn_dnb = np.count_nonzero((pp_seed_data_ecn[:-1] + pp_seed_data_dnb[1:]) == 2)
     
     return rate_ecn_dna, rate_ecn_dnb, seed_data_ecn, seed_data_dna, seed_data_dnb, pp_seed_data_ecn, pp_seed_data_dna, pp_seed_data_dnb
 
-def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices, dna_indices, dnb_indices):
+def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices, dna_indices, dnb_indices, sub_id):
     """
     Generates a 3-panel synchronized time-series plot with trigger arrows, 
     significance markers (*), and vertical alignment guidelines.
@@ -166,7 +170,8 @@ def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices,
     axes[0].plot(time, seed_data_ecn, color='royalblue', label='ECN', **line_props)
     axes[0].set_ylabel('ECN', fontsize=12, fontweight='bold')
     axes[0].axhline(threshold, color='black', linestyle='--')
-    axes[0].text(605, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    axes[0].text(time[-1] * 1.01, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    axes[0].set_title(f"Subject {sub_id} Trigger Profiles", fontsize=14, fontweight="bold", pad=12)
     
     # Overlay trigger arrows at specific time points
     for t_idx in ecn_indices:
@@ -178,7 +183,7 @@ def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices,
     axes[1].plot(time, seed_data_dna, color='crimson', label='DNA', **line_props)
     axes[1].set_ylabel('DNA', fontsize=12, fontweight='bold')
     axes[1].axhline(threshold, color='black', linestyle='--')
-    axes[1].text(605, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    axes[1].text(time[-1] * 1.01, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
     
     # Overlay asterisks for DNA
     for t_idx in dna_indices:
@@ -189,7 +194,7 @@ def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices,
     axes[2].plot(time, seed_data_dnb, color='lightcoral', label='DNB', **line_props)
     axes[2].set_ylabel('DNB', fontsize=12, fontweight='bold')
     axes[2].axhline(threshold, color='black', linestyle='--')
-    axes[2].text(605, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    axes[2].text(time[-1] * 1.01, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
     
     # Overlay asterisks for DNB
     for t_idx in dnb_indices:
@@ -198,24 +203,45 @@ def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices,
 
     # GLOBAL FORMATTING & VERTICAL ALIGNMENT LINES
     # Draw vertical dashed alignment markers across all subplots at trigger events
-    all_events = sorted(list(set(ecn_indices + dna_indices + dnb_indices)))
     for ax in axes:
         ax.set_ylim(-4.5, 4.5)           # check maximum and minimum z-scores
         ax.set_yticks([-4, -2, 0, 2, 4]) # check maximum and minimum z-scores 
         ax.grid(False)
-        # Apply the vertical line spans across panels
-        for t_idx in all_events:
-            ax.axvline(x=time[t_idx], **dash_style)
+
+        # Draw Royal Blue vertical lines for ECN triggers
+        for t_idx in ecn_indices:
+            ax.axvline(x=time[t_idx], color='royalblue', linestyle='--', linewidth=1, alpha=0.4)
             
+        # Draw Crimson vertical lines for DNA triggers
+        for t_idx in dna_indices:
+            ax.axvline(x=time[t_idx], color='crimson', linestyle='--', linewidth=1, alpha=0.4)
+            
+        # Draw Light Coral vertical lines for DNB triggers
+        for t_idx in dnb_indices:
+            ax.axvline(x=time[t_idx], color='lightcoral', linestyle='--', linewidth=1, alpha=0.4)
+    
     # Set shared X-axis parameters
     axes[2].set_xlabel('Time (sec)', fontsize=12)
-    axes[2].set_xlim(0, 0) # multiply the total number of volumes in the concatenated file by the scan's TR for the maximum limit
+    axes[2].set_xlim(0, time[-1]) # multiply the total number of volumes in the concatenated file by the scan's TR for the maximum limit
     
     # Add a unified Y axis label text block on the left
     fig.text(0.02, 0.5, 'BOLD (z)', va='center', rotation='vertical', fontsize=12, fontweight='bold')
     
     plt.tight_layout(rect=[0.04, 0, 0.95, 1])
+    plot_name = f"Trigger_profile_sub-{sub_id}.png"
+    plt.savefig(plot_name, dpi=150)
     plt.show()
+
+def density (brain_mask_path, vessel_mask_path):
+    _, brain_mask, _ = ng.load_nifti_get_mask(brain_mask_path, is_mask=True, ndim=3)
+    brain_mask_voxels = np.sum(brain_mask)
+
+    _, vessel_mask, _ = ng.load_nifti_get_mask(vessel_mask_path, is_mask=True, ndim=3)
+    vessel_mask_voxels = np.sum(vessel_mask)
+
+    vascular_density = vessel_mask_voxels / brain_mask_voxels
+
+    return brain_mask_voxels, vessel_mask_voxels, vascular_density
 
 def perform_linear_regression(x, y):
     """
@@ -274,22 +300,39 @@ def perform_linear_regression(x, y):
         "predictions": y_pred
     }
 
-def print_regression_metrics(metrics_dict, label="Dataset"):
+def print_regression_metrics(metrics_dict, label, output_file="regression_results.txt"):
     """
-    Prints a cleanly formatted summary of the regression metrics dictionary.
+    Formats linear regression results into a professional ASCII table using statsmodels,
+    prints it to the terminal, and saves/appends it to a text file.
     """
-    print(f"\n====================================")
-    print(f" REGRESSION SUMMARY: {label}")
-    print(f"====================================")
-    print(f" Line Equation:  y = {metrics_dict['slope']:.4f} * x + {metrics_dict['intercept']:.4f}")
-    print(f" Slope (Beta 1): {metrics_dict['slope']:.4f}")
-    print(f" Intercept (b):  {metrics_dict['intercept']:.4f}")
-    print(f" R² Accuracy:    {metrics_dict['r_squared']:.4f} ({metrics_dict['r_squared']*100:.1f}%)")
-    print(f" RMSE Error:     {metrics_dict['rmse']:.4f}")
-    print(f"====================================\n")
+    # 1. Define rows and data columns for the table
+    headers = ["Metric Parameter", f"Value ({label})"]
+    table_data = [
+        ["Line Equation", f"y = {metrics_dict['slope']:.4f}*x + {metrics_dict['intercept']:.4f}"],
+        ["Slope (Beta 1)", f"{metrics_dict['slope']:.4f}"],
+        ["Intercept (b)", f"{metrics_dict['intercept']:.4f}"],
+        ["R² Accuracy", f"{metrics_dict['r_squared']:.4f} ({metrics_dict['r_squared']*100:.1f}%)"],
+        ["RMSE Error", f"{metrics_dict['rmse']:.4f}"]
+    ]
+    
+    # 2. Generate the statsmodels SimpleTable
+    # txt_fmt controls the visual borders of the table
+    from statsmodels.iolib.table import default_txt_fmt
+    sm_table = SimpleTable(table_data, headers=headers, title=f"REGRESSION SUMMARY: {label}", txt_fmt=default_txt_fmt)
+    
+    # 3. Convert table to a clean string format
+    table_string = sm_table.as_text() + "\n\n"
+    
+    # 4. Print table to your terminal screen
+    print(table_string)
+    
+    # 5. Append table to your output file
+    with open(output_file, "a") as f:
+        f.write(table_string)
+
     return metrics_dict
 
-def plot_linear_regression(x, y, regression_results, title="Linear Regression Plot"):
+def plot_linear_regression(x, y, regression_results, label, title):
     """
     Plots the original data points as a scatter plot and overlays 
     the calculated linear regression line.
@@ -340,18 +383,9 @@ def plot_linear_regression(x, y, regression_results, title="Linear Regression Pl
     
     # 7. Display the plot window
     plt.tight_layout()
+    plot_name = f"Linear_Regression_{label}.png"
+    plt.savefig(plot_name, dpi=150)
     plt.show()
-
-def density (brain_mask_path, vessel_mask_path):
-    _, brain_mask, _ = ng.load_nifti_get_mask(brain_mask_path, is_mask=True, ndim=3)
-    brain_mask_voxels = np.sum(brain_mask)
-
-    _, vessel_mask, _ = ng.load_nifti_get_mask(vessel_mask_path, is_mask=True, ndim=3)
-    vessel_mask_voxels = np.sum(vessel_mask)
-
-    vascular_density = vessel_mask_voxels / brain_mask_voxels
-
-    return brain_mask_voxels, vessel_mask_voxels, vascular_density
 
 def main ():
     
@@ -359,34 +393,39 @@ def main ():
     no_subjects = 6
     no_sessions = 6
     subjects = [f"{i:02d}" for i in range(1, no_subjects + 1)]
-    sessions = [str(i) for i in range(1, no_sessions + 1)]
+    sessions = [f"{i:02d}" for i in range(1, no_sessions + 1)]
 
     fmri_base_directory = "/fmri_data" # replace with real path
     fmri_output_directory = "/fmri_data/concatenated" # replace with real path
+    
+    seed_file = "seeds.txt"
+    all_subject_seeds = load_subject_seeds(seed_file)
 
     concatenated_files = read_and_concatenate_subject_sessions(fmri_base_directory, fmri_output_directory, subjects, sessions)
 
     rate_ecn_dna_array = []
     rate_ecn_dnb_array = []
    
-    for filename in concatenated_files:
-        rate_ecn_dna, rate_ecn_dnb = maps_and_rates(filename, [0,0,0], [0,0,0], [0,0,0])[:2] # replace seed_location_ecn, seed_location_dna, seed_location_dnb with real values
+    for filename, sub in zip(concatenated_files, subjects):
+        # Calculating rates
+        sub_seeds = all_subject_seeds[sub]
+        seed_ecn = sub_seeds['ecn']
+        seed_dna = sub_seeds['dna']
+        seed_dnb = sub_seeds['dnb']
+        
+        rate_ecn_dna, rate_ecn_dnb, seed_data_ecn, seed_data_dna, seed_data_dnb, pp_seed_data_ecn, pp_seed_data_dna, pp_seed_data_dnb = maps_and_rates(filename, seed_ecn, seed_dna, seed_dnb, fmri_output_directory, sub) 
+        
         rate_ecn_dna_array.append(rate_ecn_dna)
         rate_ecn_dnb_array.append(rate_ecn_dnb)
 
-    # Plotting the time-series with triggers
-    for sub in subjects:
-        concat_file = concatenated_files[sub]
-        
-        _, _, seed_data_ecn, seed_data_dna, seed_data_dnb, pp_seed_data_ecn, pp_seed_data_dna, pp_seed_data_dnb = maps_and_rates(concat_file, [0,0,0], [0,0,0], [0,0,0]) # replace seed_location_ecn, seed_location_dna, seed_location_dnb with real values
-        
-        ecn_indices = np.where(pp_seed_data_ecn == 1)[sub]
-        dna_indices = np.where(pp_seed_data_dna == 1)[sub]
-        dnb_indices = np.where(pp_seed_data_dnb == 1)[sub]
+        # Plotting the time-series with triggers  
+        ecn_indices = np.where(pp_seed_data_ecn == 1)[0]
+        dna_indices = np.where(pp_seed_data_dna == 1)[0]
+        dnb_indices = np.where(pp_seed_data_dnb == 1)[0]
 
         time = np.arange(len(seed_data_ecn)) * 2.0 # Replace with real TR
 
-        plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices, dna_indices, dnb_indices) # replace with real data
+        plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices, dna_indices, dnb_indices, sub)
 
     #MRI data processing for vascular density
     vessel_segmentation_directory = "/Neurodata/M3PI/derivatives/vessels/segmentations/prediction/"
@@ -419,10 +458,38 @@ def main ():
     metrics_ecn_dnb = perform_linear_regression(density_array, rate_ecn_dnb_array)
     print_regression_metrics(metrics_ecn_dnb, label=f"ECN-DNB")
 
-    plot_linear_regression(density_array, rate_ecn_dna_array, metrics_ecn_dna, title="Linear Regression: Density vs ECN-DNA Switching Rate")
-    plot_linear_regression(density_array, rate_ecn_dnb_array, metrics_ecn_dnb, title="Linear Regression: Density vs ECN-DNB Switching Rate")
+    plot_linear_regression(density_array, rate_ecn_dna_array, metrics_ecn_dna, label=f"ECN-DNA", title="Linear Regression: Density vs ECN-DNA Switching Rate")
+    plot_linear_regression(density_array, rate_ecn_dnb_array, metrics_ecn_dnb, label=f"ECN-DNB", title="Linear Regression: Density vs ECN-DNB Switching Rate")
 
     return 
 
 if __name__ == "__main__":
     main()
+
+# Copyright (c) 2014, Child Mind Institute, Inc. and C-PAC developers
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

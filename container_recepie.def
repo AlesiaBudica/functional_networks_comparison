@@ -1,14 +1,9 @@
 From: ubuntu:22.04
 
 %arguments
-R_VER=4.3.2-1.2204.0
 AFNI_VER=24.0.00
 ANTS_VER=2.5.0
 C3D_VER=1.0.0
-FSL_VER=6.0.7.6
-P2C_VER=0.18.3
-PK_VER=0.2.1
-EUSKPREPROC_VER=0.7.1
 
 %environment
 export AFNIPATH="/opt/afni-AFNI_24.0.00"
@@ -19,22 +14,10 @@ export AFNI_COMPRESSOR=GZIP
 export ANTSPATH="/opt/ants-2.5.0/bin"
 export ANTSSCRIPTS="/opt/ants-2.5.0/Scripts"
 export C3DPATH="/opt/convert3d-1.0.0"
-export FSLDIR="/opt/fsl-6.0.7.6"
-source ${FSLDIR}/etc/fslconf/fsl.sh
-export FSLOUTPUTTYPE="NIFTI_GZ"
-export FSLMULTIFILEQUIT="TRUE"
-export FSLTCLSH="$FSLDIR/bin/fsltclsh"
-export FSLWISH="$FSLDIR/bin/fslwish"
-export FSLLOCKDIR=""
-export FSLMACHINELIST=""
-export FSLREMOTECALL=""
-export FSLGECUDAQ="cuda.q"
 export DEBIAN_FRONTEND=noninteractive
 export TZ=Europe/Brussels
-export R_LIBS="/usr/lib/R"
 export LD_LIBRARY_PATH="/opt/ants-2.5.0/lib:$LD_LIBRARY_PATH"
-export PREPROCPATH="/opt/preprocessing"
-export PATH="$AFNIPATH:$ANTSPATH:$ANTSSCRIPTS:$C3DPATH/bin:$FSLDIR/bin:$PREPROCPATH:$PREPROCPATH/00.pipelines:$PATH"
+export PATH="$AFNIPATH:$ANTSPATH:$ANTSSCRIPTS:$C3DPATH/bin:$PATH"
 
 %post
 # Set install variables, create tmp folder

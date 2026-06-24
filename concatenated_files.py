@@ -1,6 +1,10 @@
+#!/usr/bin/env python3
+
 import os
+
 import nibabel as nb
 from nibabel.funcs import concat_images
+
 
 def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, session_ids):
     """
@@ -35,7 +39,7 @@ def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, ses
         
         # Loop over the 6 sessions for the current subject
         for ses in session_ids:
-            file_name = f"sub-{sub}_ses-{ses}_bold.nii.gz"
+            file_name = f"00.sub-{sub}_ses-{ses}_task-simon_echo-1_native_preprocessed.nii.gz"
             file_path = os.path.join(data_dir, f"sub-{sub}", f"ses-{ses}", file_name)
             
             if os.path.exists(file_path):
@@ -66,6 +70,7 @@ def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, ses
     # Return the completed array of file paths
     return saved_paths
 
+
 def main ():
     
     # fMRI data concatenation
@@ -80,6 +85,7 @@ def main ():
     read_and_concatenate_subject_sessions(fmri_base_directory, fmri_output_directory, subjects, sessions)
 
     return
+
 
 if __name__ == "__main__":
     main()

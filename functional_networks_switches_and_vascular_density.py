@@ -37,75 +37,12 @@ def load_subject_seeds(seed_file_path):
             }
     return subject_seeds
 
-def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, session_ids):
-    """
-    Loops through subjects, reads their session NIfTI files, 
-    concatenates them, saves the combined image, and returns the output paths.
-    
-    Parameters
-    ----------
-    data_dir : str
-        The base directory containing the raw subject folders.
-    output_dir : str
-        The directory where the concatenated NIfTI files will be saved.
-    subject_ids : list
-        List of subject IDs.
-    session_ids : list
-        List of session IDs.
-
-    Returns
-    -------
-    list
-        A list of file paths pointing to the saved concatenated NIfTI images.
-    """
-    # Create the output directory if it does not already exist
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Initialize an empty array/list to collect the saved file paths
-    saved_paths = []
-
-    # 1. Loop over the 6 subjects
-    for sub in subject_ids:
-        session_files = []
-        
-        # 2. Loop over the 6 sessions for the current subject
-        for ses in session_ids:
-            file_name = f"sub-{sub}_ses-{ses}_bold.nii.gz"
-            file_path = os.path.join(data_dir, f"sub-{sub}", f"ses-{ses}", file_name)
-            
-            if os.path.exists(file_path):
-                print(f"Loading: {file_name}")
-                nifti_img = nb.load(file_path)
-                session_files.append(nifti_img)
-            else:
-                print(f"Warning: File missing at {file_path}")
-
-        # 3. Concatenate and save files for this subject
-        if session_files:
-            print(f"--> Concatenating 6 sessions for subject: {sub}")
-            concat_img = concat_images(session_files)
-            
-            # Define output filename and path
-            output_name = f"sub-{sub}_desc-concatenated_bold.nii.gz"
-            output_path = os.path.abspath(os.path.join(output_dir, output_name))
-            
-            # Save the new combined 4D image to disk
-            nb.save(concat_img, output_path)
-            print(f"Successfully saved: {output_name}\n")
-            
-            # Append the completed path to our tracking array
-            saved_paths.append(output_path)
-        else:
-            print(f"Error: No sessions found for subject {sub}\n")
-
-    # Return the completed array of file paths
-    return saved_paths
-
-# THE FOLLOWING CODE IS USED UNDER THE BSD 3-CLAUSE LICENSE
 # Point process analysis for a signal. Values equal to 1 when the original value 
 # is higher than the threshold (1.5*SD)
 def point_process(signal):
-
+    """
+    The following code is taken from https://erramuzpe.github.io/C-PAC/blog/2015/08/07/integration-of-measures-and-point-process-developing/ and copyrighted to Asier Erramuzpe.
+    """
     pp_signal = np.zeros_like(signal)
     th = np.std(signal) * 1.5
 
@@ -115,7 +52,9 @@ def point_process(signal):
 
 # Given an fMRI, extract timeseries, calculate Point Process and then the Rate and Map for each voxel given a seed
 def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_dnb, outdir, sub, map_ecn_file_name = 'map_ecn', map_dna_file_name = 'map_dna', map_dnb_file_name = 'map_dnb'):
-
+    """
+    The following code is taken from https://erramuzpe.github.io/C-PAC/blog/2015/08/07/integration-of-measures-and-point-process-developing/ and copyrighted to Asier Erramuzpe.
+    """
     # Treat fMRI image
     data, mask, img = ng.load_nifti_get_mask(in_file)
 
@@ -132,20 +71,32 @@ def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_
     # Map and switch rates
     # Save map_ecn
     map_ecn = data[..., pp_seed_data_ecn != 0].mean(axis=-1)
+    map_ecn_mask = np.zeros_like(map_ecn)
+    map_ecn_mask[map_ecn!=0] = 1
     map_ecn_file_path = f'{outdir}/{map_ecn_file_name}_sub-{sub}.nii.gz'
     ng.export_nifti(map_ecn, img, map_ecn_file_path)
+    map_ecn_mask_file_path = f'{outdir}/{map_ecn_file_name}_mask_sub-{sub}.nii.gz'
+    ng.export_nifti(map_ecn_mask, img, map_ecn_mask_file_path)
     print(f"Success! Map ECN saved to: {map_ecn_file_path}")
 
     # Save map_dna
     map_dna = data[..., pp_seed_data_dna != 0].mean(axis=-1)
+    map_dna_mask = np.zeros_like(map_dna)
+    map_dna_mask[map_dna!=0] = 1
     map_dna_file_path = f'{outdir}/{map_dna_file_name}_sub-{sub}.nii.gz'
     ng.export_nifti(map_dna, img, map_dna_file_path)
+    map_dna_mask_file_path = f'{outdir}/{map_dna_file_name}_mask_sub-{sub}.nii.gz'
+    ng.export_nifti(map_dna_mask, img, map_dna_mask_file_path)
     print(f"Success! Map DNA saved to: {map_dna_file_path}")
 
     # Save map_dnb
     map_dnb = data[..., pp_seed_data_dnb != 0].mean(axis=-1)
+    map_dnb_mask = np.zeros_like(map_dnb)
+    map_dnb_mask[map_dnb!=0] = 1
     map_dnb_file_path = f'{outdir}/{map_dnb_file_name}_sub-{sub}.nii.gz'
     ng.export_nifti(map_dnb, img, map_dnb_file_path)
+    map_dnb_mask_file_path = f'{outdir}/{map_dnb_file_name}_mask_sub-{sub}.nii.gz'
+    ng.export_nifti(map_dnb_mask, img, map_dnb_mask_file_path)
     print(f"Success! Map DNB saved to: {map_dnb_file_path}")
 
     rate_ecn_dna = np.count_nonzero((pp_seed_data_ecn[:-1] + pp_seed_data_dna[1:]) == 2)
@@ -231,17 +182,6 @@ def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices,
     plot_name = f"Trigger_profile_sub-{sub_id}.png"
     plt.savefig(plot_name, dpi=150)
     plt.show()
-
-def density (brain_mask_path, vessel_mask_path):
-    _, brain_mask, _ = ng.load_nifti_get_mask(brain_mask_path, is_mask=True, ndim=3)
-    brain_mask_voxels = np.sum(brain_mask)
-
-    _, vessel_mask, _ = ng.load_nifti_get_mask(vessel_mask_path, is_mask=True, ndim=3)
-    vessel_mask_voxels = np.sum(vessel_mask)
-
-    vascular_density = vessel_mask_voxels / brain_mask_voxels
-
-    return brain_mask_voxels, vessel_mask_voxels, vascular_density
 
 def perform_linear_regression(x, y):
     """
@@ -466,30 +406,10 @@ def main ():
 if __name__ == "__main__":
     main()
 
-# Copyright (c) 2014, Child Mind Institute, Inc. and C-PAC developers
-# All rights reserved.
+"""
+Copyright [2026] [Alesia Maria Budica]
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-
-# 1. Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer.
-
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-
-# 3. Neither the name of the copyright holder nor the names of its contributors
-# may be used to endorse or promote products derived from this software without
-# specific prior written permission.
-
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+"""

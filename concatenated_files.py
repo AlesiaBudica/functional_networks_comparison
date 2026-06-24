@@ -74,8 +74,8 @@ def main ():
     subjects = [f"{i:02d}" for i in range(1, no_subjects + 1)]
     sessions = [f"{i:02d}" for i in range(1, no_sessions + 1)]
 
-    fmri_base_directory = "/fmri_data" # replace with real path
-    fmri_output_directory = "/fmri_data/concatenated" # replace with real path
+    fmri_base_directory = "/data/vessels"  # /data will be bound to /Neurodata/M3PI/derivatives
+    fmri_output_directory = "/data/func_net_comp"
 
     read_and_concatenate_subject_sessions(fmri_base_directory, fmri_output_directory, subjects, sessions)
 

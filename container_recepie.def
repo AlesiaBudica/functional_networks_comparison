@@ -232,7 +232,10 @@ pip3 install \
     zipp==3.11.0
 
 # Additional libraries
-pip3 install nigsp networkx statsmodels
+pip3 install \
+    nigsp==0.19.0 \
+    networkx==3.4.2 \
+    statsmodels==0.14.6
 
 # Final removal of lists and cleanup
 cd /tmp || exit 1

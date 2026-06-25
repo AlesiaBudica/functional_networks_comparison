@@ -40,7 +40,7 @@ def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, ses
         # Loop over the 6 sessions for the current subject
         for ses in session_ids:
             file_name = f"00.sub-{sub}_ses-{ses}_task-simon_optcom_native_preprocessed.nii.gz"
-            file_path = os.path.join(data_dir, f"sub-{sub}", f"ses-{ses}", file_name)
+            file_path = os.path.join(data_dir, f"sub-{sub}", f"ses-{ses}", "func", file_name)
             
             if os.path.exists(file_path):
                 print(f"Loading: {file_name}")

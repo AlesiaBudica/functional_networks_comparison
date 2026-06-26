@@ -186,7 +186,7 @@ def main():
     print("====================================")
 
     for sub in subjects:
-        file_name_brain = f"00.sub-{sub}_ses-7T_part-mag_T2starw_brain_mask.nii.gz"
+        file_name_brain = f"00.sub-{sub}_ses-7T_part-mag_T2starw_imgavg_preprocessed_brain.nii.gz"
         full_path_brain = os.path.abspath(os.path.join(vessel_segmentation_directory, file_name_brain))
 
         file_name_vessel = f"00.sub-{sub}_ses-7T_part-mag_T2starw_imgavg_preprocessed_vessels.nii.gz"
@@ -202,8 +202,7 @@ def main():
         print("====================================")
 
         for k in ["ecn", "dna", "dnb"]:
-            file_name_brain = f"00.sub-{sub}_ses-7T_part-mag_T2starw_brain_mask.nii.gz"
-            f'map_{k}_mask_sub-{sub}.nii.gz'
+            file_name_brain = f"00.sub-{sub}_ses-7T_part-mag_T2starw_imgavg_preprocessed_brain.nii.gz"
             full_path_brain = os.path.abspath(os.path.join(fmri_output_directory, file_name_brain))
 
             brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_brain, full_path_vessel)

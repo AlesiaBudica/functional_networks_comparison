@@ -15,7 +15,8 @@ def density(brain_mask_path, vessel_mask_path):
     brain_mask_voxels = np.sum(brain_mask)
 
     _, vessel_mask, _ = ng.load_nifti_get_mask(vessel_mask_path, is_mask=True, ndim=3)
-    vessel_mask_voxels = np.sum(vessel_mask * brain_mask_voxels)
+    vessel_inside_brain = vessel_mask * brain_mask
+    vessel_mask_voxels = np.sum(vessel_inside_brain)
 
     vascular_density = vessel_mask_voxels / brain_mask_voxels
 

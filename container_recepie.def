@@ -2,22 +2,15 @@ Bootstrap: docker
 From: ubuntu:22.04
 
 %arguments
-AFNI_VER=24.0.00
-ANTS_VER=2.5.0
+ANTS_VER=2.5.4
 C3D_VER=1.0.0
 
 %environment
-export AFNIPATH="/opt/afni-AFNI_24.0.00"
-export AFNI_PLUGINPATH="$AFNIPATH"
-export templateloc=/usr/share/afni/atlases
-export AFNI_AUTOGZIP=YES
-export AFNI_COMPRESSOR=GZIP
-export ANTSPATH="/opt/ants-2.5.0/bin"
-export ANTSSCRIPTS="/opt/ants-2.5.0/Scripts"
-export C3DPATH="/opt/convert3d-1.0.0"
+export ANTSPATH="/opt/ants-{{ ANTS_VER }}/bin"
+export ANTSSCRIPTS="/opt/ants-{{ ANTS_VER }}/Scripts"
 export DEBIAN_FRONTEND=noninteractive
 export TZ=Europe/Brussels
-export LD_LIBRARY_PATH="/opt/ants-2.5.0/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/opt/ants-{{ ANTS_VER }}/lib:$LD_LIBRARY_PATH"
 export PATH="$AFNIPATH:$ANTSPATH:$ANTSSCRIPTS:$C3DPATH/bin:$PATH"
 
 %post
@@ -107,46 +100,18 @@ apt install -y -q --no-install-recommends \
     xvfb \
     zlib1g-dev
 
-# Install AFNI
-mkdir -p ${TMPDIR}/afni
-cd ${TMPDIR}/afni || exit 1
-ln -s /usr/lib/x86_64-linux-gnu/libgsl.so.23 /usr/lib/x86_64-linux-gnu/libgsl.so.19
-ln -s /usr/lib/x86_64-linux-gnu/libXp.so.6 /usr/lib/x86_64-linux-gnu/libXp.so
-git clone https://github.com/afni/afni.git source
-cd source || exit 1
-git fetch --tags
-git -c advice.detachedHead=false checkout AFNI_22.3.07
-cd src || exit 1
-cp other_builds/Makefile.linux_ubuntu_16_64_glw_local_shared Makefile
-make itall
-mv linux_ubuntu_16_64_glw_local_shared /opt/afni-AFNI_22.3.07
-export PATH="/opt/afni-AFNI_22.3.07:$PATH"
-export R_LIBS="/usr/lib/R"
-rPkgsInstall -pkgs ALL
-cd ${TMPDIR} || exit 1
-rm -rf ${TMPDIR}/afni
-
 # Install ANTs
 mkdir -p ${TMPDIR}/ants/build
-git clone https://github.com/ANTsX/ANTs.git ${TMPDIR}/ants/source
-cd ${TMPDIR}/ants/source || exit 1
-git fetch --tags
-git -c advice.detachedHead=false checkout v2.4.2
+git clone -b v{{ ANTS_VER }} --depth=1 https://github.com/ANTsX/ANTs.git ${TMPDIR}/ants/source
 cd ${TMPDIR}/ants/build || exit 1
-cmake -DCMAKE_INSTALL_PREFIX=/opt/ants-2.4.2 -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF ${TMPDIR}/ants/source
+cmake -DCMAKE_INSTALL_PREFIX=/opt/ants-{{ ANTS_VER }} -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF ${TMPDIR}/ants/source
 make -j 10
-mkdir -p /opt/ants-2.4.2
+mkdir -p /opt/ants-{{ ANTS_VER }}
 cd ANTS-build || exit 1
 make install
-mv ../../source/Scripts/ /opt/ants-2.4.2
+mv ../../source/Scripts/ /opt/ants-{{ ANTS_VER }}
 cd ${TMPDIR} || exit 1
 rm -rf ${TMPDIR}/ants
-
-# Install C3D
-echo "Downloading Convert3D ..."
-mkdir -p /opt/convert3d-1.0.0
-curl -fsSL https://sourceforge.net/projects/c3d/files/c3d/1.0.0/c3d-1.0.0-Linux-x86_64.tar.gz/download \
-| tar -xz -C /opt/convert3d-1.0.0 --strip-components 1
 
 # Install pipeline software packages
 pip3 install \

@@ -52,7 +52,7 @@ def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, ses
         # Concatenate and save files for the current subject
         if session_files:
             print(f"--> Concatenating 6 sessions for subject: {sub}")
-            concat_file = concat_images(session_files)
+            concat_file = concat_images(session_files, axis=-1)
             
             # Define output filename and path
             output_name = f"sub-{sub}_concatenated_bold.nii.gz"

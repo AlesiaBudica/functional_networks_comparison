@@ -197,21 +197,21 @@ def main():
 
         print(f"Subject {sub}")
         print(f"Total Brain Voxels : {brain_mask_voxels}")
-        print(f"Total Vessel Voxels Subject : {vessel_mask_voxels}")
-        print(f"Calculated Whole-Brain Vascular Density Subject : {vascular_density:.6f}")
+        print(f"Total Vessel Voxels : {vessel_mask_voxels}")
+        print(f"Calculated Whole-Brain Vascular Density : {vascular_density:.6f}")
         print("====================================")
 
         for k in ["ecn", "dna", "dnb"]:
             file_name_brain = f"00.sub-{sub}_ses-7T_part-mag_T2starw_imgavg_preprocessed_brain.nii.gz"
-            full_path_brain = os.path.abspath(os.path.join(fmri_output_directory, file_name_brain))
+            full_path_brain = os.path.abspath(os.path.join(vessel_segmentation_directory, file_name_brain))
 
             brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_brain, full_path_vessel)
             density_array[k].append(vascular_density)
 
             print(f"Subject {sub}")
             print(f"Total {k} Voxels : {brain_mask_voxels}")
-            print(f"Total Vessel Voxels Subject : {vessel_mask_voxels}")
-            print(f"Calculated {k} Vascular Density Subject : {vascular_density:.6f}")
+            print(f"Total Vessel Voxels : {vessel_mask_voxels}")
+            print(f"Calculated {k} Vascular Density : {vascular_density:.6f}")
             print("====================================")
 
     # Regression analysis between switching rates and vascular density

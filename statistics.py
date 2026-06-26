@@ -7,7 +7,7 @@ import numpy as np
 from scipy import stats
 from statsmodels.iolib.table import SimpleTable
 
-import nigsp as ng
+from nigsp import io as ng
 
 
 def density(brain_mask_path, vessel_mask_path):

@@ -5,7 +5,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-import nigsp as ng
+from nigsp import io as ng
 
 
 def load_subject_seeds(seed_file_path):

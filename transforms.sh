@@ -13,7 +13,7 @@ do
 		antsApplyTransforms -d 3 -i /data/func_net_comp/map_${map}_mask_sub-${sub}.nii.gz \
 							-r ${anat_reference} \
 							-o /data/func_net_comp/map_${map}_mask_sub-${sub}_vesselres.nii.gz \
-							-n MultiLabel \
+							-n NearestNeighbor \
 							-t ${T1w2T2starw} \
 							-t ${T2w2T1w} \
 							-t [${T2w2func},1]

@@ -10,8 +10,13 @@ from statsmodels.iolib.table import SimpleTable
 from nigsp import io as ng
 
 
-def density(brain_mask_path, vessel_mask_path):
+def density(brain_mask_path, vessel_mask_path, wholebrain_mask=None):
     _, brain_mask, _ = ng.load_nifti_get_mask(brain_mask_path, is_mask=True, ndim=3)
+
+    if wholebrain_mask is not None:
+        _, wholebrain_mask, _ = ng.load_nifti_get_mask(wholebrain_mask, is_mask=True, ndim=3)
+        brain_mask = brain_mask * wholebrain_mask
+
     brain_mask_voxels = np.sum(brain_mask)
 
     _, vessel_mask, _ = ng.load_nifti_get_mask(vessel_mask_path, is_mask=True, ndim=3)
@@ -139,7 +144,7 @@ def plot_linear_regression(x, y, regression_results, label, title, fmri_output_d
     r_2 = regression_results["r_squared"]
 
     # 2. Initialize the plot figure
-    plt.figure(figsize=(8, 5), dpi=100)
+    plt.figure(figsize=(8, 5), dpi=300)
 
     # 3. Scatter plot for the actual raw data points
     plt.scatter(x_arr, y_arr, color="darkblue", alpha=0.7, edgecolors="k", s=80, label="Actual Data")
@@ -166,7 +171,7 @@ def plot_linear_regression(x, y, regression_results, label, title, fmri_output_d
     # 7. Display the plot window
     plt.tight_layout()
     plot_name = os.path.join(fmri_output_directory, f"Linear_Regression_{label}.png")
-    plt.savefig(plot_name, dpi=150)
+    plt.savefig(plot_name, dpi=300)
     plt.show()
 
 
@@ -202,10 +207,10 @@ def main():
         print("====================================")
 
         for k in ["ecn", "dna", "dnb"]:
-            file_name_brain = f'map_{k}_mask_sub-{sub}_vesselres.nii.gz'
-            full_path_brain = os.path.abspath(os.path.join(fmri_output_directory, file_name_brain))
+            file_name_network = f'map_{k}_mask_sub-{sub}_vesselres.nii.gz'
+            full_path_network = os.path.abspath(os.path.join(fmri_output_directory, file_name_network))
 
-            brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_brain, full_path_vessel)
+            brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_network, full_path_vessel, full_path_brain)
             density_array[k].append(vascular_density)
 
             print(f"Subject {sub}")

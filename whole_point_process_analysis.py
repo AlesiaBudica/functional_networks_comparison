@@ -37,13 +37,13 @@ def load_subject_seeds(seed_file_path):
 
 
 # Point process analysis for a signal. Values equal to 1 when the original value 
-# is higher than the threshold (1.5*SD)
+# is higher than the threshold (1.2*SD)
 def point_process(signal):
     """
     The following code is taken from https://erramuzpe.github.io/C-PAC/blog/2015/08/07/integration-of-measures-and-point-process-developing/ and copyrighted to Asier Erramuzpe.
     """
     pp_signal = np.zeros_like(signal)
-    th = np.std(signal) * 1.5
+    th = 1.2  # It's normalised!
 
     pp_signal[signal > th] = 1
 
@@ -72,7 +72,7 @@ def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_
     # Save map_ecn
     map_ecn = data[..., pp_seed_data_ecn != 0].mean(axis=-1)
     map_ecn_mask = np.zeros_like(map_ecn)
-    map_ecn_mask[map_ecn!=0] = 1
+    map_ecn_mask[map_ecn > .5] = 1
     map_ecn_file_path = f'{outdir}/{map_ecn_file_name}_sub-{sub}.nii.gz'
     ng.export_nifti(map_ecn, img, map_ecn_file_path)
     map_ecn_mask_file_path = f'{outdir}/{map_ecn_file_name}_mask_sub-{sub}.nii.gz'
@@ -82,7 +82,7 @@ def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_
     # Save map_dna
     map_dna = data[..., pp_seed_data_dna != 0].mean(axis=-1)
     map_dna_mask = np.zeros_like(map_dna)
-    map_dna_mask[map_dna!=0] = 1
+    map_dna_mask[map_dna > .5] = 1
     map_dna_file_path = f'{outdir}/{map_dna_file_name}_sub-{sub}.nii.gz'
     ng.export_nifti(map_dna, img, map_dna_file_path)
     map_dna_mask_file_path = f'{outdir}/{map_dna_file_name}_mask_sub-{sub}.nii.gz'
@@ -92,7 +92,7 @@ def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_
     # Save map_dnb
     map_dnb = data[..., pp_seed_data_dnb != 0].mean(axis=-1)
     map_dnb_mask = np.zeros_like(map_dnb)
-    map_dnb_mask[map_dnb!=0] = 1
+    map_dnb_mask[map_dnb > .5] = 1
     map_dnb_file_path = f'{outdir}/{map_dnb_file_name}_sub-{sub}.nii.gz'
     ng.export_nifti(map_dnb, img, map_dnb_file_path)
     map_dnb_mask_file_path = f'{outdir}/{map_dnb_file_name}_mask_sub-{sub}.nii.gz'
@@ -111,76 +111,58 @@ def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices,
     significance markers (*), and vertical alignment guidelines.
     """
     # Create a 3-row synchronized figure sharing the exact same X-axis
-    fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True, dpi=150)
+    fig, axes = plt.subplots(3, 1, figsize=(16, 6), sharex=True, dpi=300)
     
     # Define styling profiles
-    line_props = dict(marker='o', markersize=3, markerfacecolor='white', linewidth=1, alpha=0.7)
-    dash_style = dict(color='gray', linestyle='--', linewidth=1, alpha=0.6)
+    line_props = dict(linestyle='-', linewidth=1, alpha=1)
+    dash_style = dict(color='black', linestyle='--', linewidth=1, alpha=0.5)
 
     # PANEL 1: ECN Time-Series (Top Channel)
-    threshold = np.std(seed_data_ecn) * 1.5    
+    threshold = 1.2
     axes[0].plot(time, seed_data_ecn, color='royalblue', label='ECN', **line_props)
-    axes[0].set_ylabel('ECN', fontsize=12, fontweight='bold')
-    axes[0].axhline(threshold, color='black', linestyle='--')
-    axes[0].text(time[-1] * 1.01, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
-    axes[0].set_title(f"Subject {sub_id} Trigger Profiles", fontsize=14, fontweight="bold", pad=12)
+    axes[0].set_ylabel('ECN', fontsize=12)
+    axes[0].axhline(threshold, **dash_style)
+    axes[0].set_title(f"Subject {sub_id} Trigger Profiles", fontsize=14, pad=12)
     
     # Overlay trigger arrows at specific time points
     for t_idx in ecn_indices:
-        axes[0].annotate('', xy=(time[t_idx], 2.2), xytext=(time[t_idx], 4.0),
-                         arrowprops=dict(facecolor='black', arrowstyle='->', lw=2))
+        axes[0].text(time[t_idx], 1.2, '*', fontsize=9, ha='center')
         
     # PANEL 2: DNA Time-Series (Middle Channel)
-    threshold = np.std(seed_data_dna) * 1.5
+    threshold = 1.2
     axes[1].plot(time, seed_data_dna, color='crimson', label='DNA', **line_props)
-    axes[1].set_ylabel('DNA', fontsize=12, fontweight='bold')
-    axes[1].axhline(threshold, color='black', linestyle='--')
-    axes[1].text(time[-1] * 1.01, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    axes[1].set_ylabel('DNA', fontsize=12)
+    axes[1].axhline(threshold, **dash_style)
     
     # Overlay asterisks for DNA
     for t_idx in dna_indices:
-        axes[1].text(time[t_idx], 1.5, '*', fontsize=18, fontweight='bold', ha='center')
+        axes[1].text(time[t_idx], 1.2, '*', fontsize=9, ha='center')
 
     # PANEL 3: DNB Time-Series (Bottom Channel)
-    threshold = np.std(seed_data_dnb) * 1.5
+    threshold = 1.2
     axes[2].plot(time, seed_data_dnb, color='lightcoral', label='DNB', **line_props)
-    axes[2].set_ylabel('DNB', fontsize=12, fontweight='bold')
-    axes[2].axhline(threshold, color='black', linestyle='--')
-    axes[2].text(time[-1] * 1.01, threshold, '1.5 SD Cutoff', verticalalignment='center', fontsize=11)
+    axes[2].set_ylabel('DNB', fontsize=12)
+    axes[2].axhline(threshold, **dash_style)
     
     # Overlay asterisks for DNB
     for t_idx in dnb_indices:
-        axes[2].text(time[t_idx], 1.5, '*', fontsize=18, fontweight='bold', ha='center')
+        axes[2].text(time[t_idx], 1.2, '*', fontsize=9, ha='center')
         
     # GLOBAL FORMATTING & VERTICAL ALIGNMENT LINES
     # Draw vertical dashed alignment markers across all subplots at trigger events
     for ax in axes:
-        ax.set_ylim(-4.5, 4.5)           # check maximum and minimum z-scores
-        ax.set_yticks([-4, -2, 0, 2, 4]) # check maximum and minimum z-scores 
         ax.grid(False)
-
-        # Draw Royal Blue vertical lines for ECN triggers
-        for t_idx in ecn_indices:
-            ax.axvline(x=time[t_idx], color='royalblue', linestyle='--', linewidth=1, alpha=0.4)
-            
-        # Draw Crimson vertical lines for DNA triggers
-        for t_idx in dna_indices:
-            ax.axvline(x=time[t_idx], color='crimson', linestyle='--', linewidth=1, alpha=0.4)
-            
-        # Draw Light Coral vertical lines for DNB triggers
-        for t_idx in dnb_indices:
-            ax.axvline(x=time[t_idx], color='lightcoral', linestyle='--', linewidth=1, alpha=0.4)
     
     # Set shared X-axis parameters
     axes[2].set_xlabel('Time (sec)', fontsize=12)
-    axes[2].set_xlim(0, time[-1]) # multiply the total number of volumes in the concatenated file by the scan's TR for the maximum limit
+    axes[2].set_xlim(0, time[-1])
     
     # Add a unified Y axis label text block on the left
-    fig.text(0.02, 0.5, 'BOLD (z)', va='center', rotation='vertical', fontsize=12, fontweight='bold')
+    fig.text(0.02, 0.5, 'BOLD (z)', va='center', rotation='vertical', fontsize=12)
     
-    plt.tight_layout(rect=[0.04, 0, 0.95, 1])
+    plt.tight_layout()
     plot_name = os.path.join(fmri_output_directory, f"Trigger_profile_sub-{sub_id}.png")
-    plt.savefig(plot_name, dpi=150)
+    plt.savefig(plot_name, dpi=300)
     plt.show()
 
 

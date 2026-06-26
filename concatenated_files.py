@@ -5,6 +5,8 @@ import os
 import nibabel as nb
 from nibabel.funcs import concat_images
 
+from scipy.stats import zscore
+
 
 def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, session_ids):
     """
@@ -45,6 +47,9 @@ def read_and_concatenate_subject_sessions(data_dir, output_dir, subject_ids, ses
             if os.path.exists(file_path):
                 print(f"Loading: {file_name}")
                 nifti_img = nb.load(file_path)
+                data = nifti_img.get_fdata()
+                data = zscore(data, axis=-1)
+                nifti_img = nb.Nifti1Image(data, nifti_img.affine, nifti_img.header)
                 session_files.append(nifti_img)
             else:
                 print(f"Warning: File missing at {file_path}")

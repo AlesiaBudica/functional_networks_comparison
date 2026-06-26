@@ -11,7 +11,7 @@ do
 	for map in ecn dna dnb
 	do
 		antsApplyTransforms -d 3 -i /data/func_net_comp/map_${map}_mask_sub-${sub}.nii.gz \
-							-r ${anat_reference}.nii.gz \
+							-r ${anat_reference} \
 							-o /data/func_net_comp/map_${map}_mask_sub-${sub}_vesselres.nii.gz \
 							-n MultiLabel \
 							-t ${T1w2T2starw} \

@@ -157,10 +157,8 @@ def plot_trigger(time, seed_data_ecn, seed_data_dna, seed_data_dnb, ecn_indices,
     axes[2].set_xlabel('Time (sec)', fontsize=12)
     axes[2].set_xlim(0, time[-1])
     
-    plt.tight_layout()
-
-    # Add a unified Y axis label text block on the left
-    fig.supylabel('BOLD (z)', fontsize=12, fontweight='normal', x=0.01)
+    fig.subplots_adjust(left=0.10, right=0.98, top=0.92, bottom=0.12, hspace=0.2)
+    fig.text(0.04, 0.5, 'BOLD (z)', va='center', rotation='vertical', fontsize=12, fontweight='normal')
      
     plot_name = os.path.join(fmri_output_directory, f"Trigger_profile_sub-{sub_id}.png")
     plt.savefig(plot_name, dpi=300)

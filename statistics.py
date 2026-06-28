@@ -77,6 +77,9 @@ def perform_linear_regression(x, y):
     ss_total = np.sum((y - y_mean) ** 2)
     r_squared = 1 - (ss_residual / ss_total) if ss_total != 0 else 0.0
 
+    # Calculate p-value using scipy.stats
+    _, _, _, p_value, _ = stats.linregress(x, y)
+
     return {
         "slope": slope,
         "intercept": intercept,
@@ -98,6 +101,7 @@ def print_regression_metrics(metrics_dict, label, output_file="regression_result
         ["Slope (Beta 1)", f"{metrics_dict['slope']:.4f}"],
         ["Intercept (b)", f"{metrics_dict['intercept']:.4f}"],
         ["R² Accuracy", f"{metrics_dict['r_squared']:.4f} ({metrics_dict['r_squared']*100:.1f}%)"],
+        ["p-value", f"{metrics_dict['p_value']:.4f}"],
         ["RMSE Error", f"{metrics_dict['rmse']:.4f}"]
     ]
     
@@ -157,23 +161,102 @@ def plot_linear_regression(x, y, regression_results, label, x_axis_label, y_axis
     plt.plot(x_arr[sort_idx], y_pred[sort_idx], color="crimson", linewidth=2.5, 
              label=f"Fit: y = {slope:.2f}x + {intercept:.2f}")
 
-    # 5. Add text box in the upper left containing the R² score
-    stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}"
-    plt.gca().text(0.05, 0.95, stats_text, transform=plt.gca().transAxes,
-                   fontsize=11, verticalalignment='top', 
-                   bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
-
     # 6. Labels, grid, and legend styling
     plt.xlabel(x_axis_label, fontsize=12)
     plt.ylabel(y_axis_label, fontsize=12)
     plt.grid(True, linestyle="--", alpha=0.5)
-    plt.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=11)
-    
+   
+    if label == "DNB_ECN-DNA" or label == "ECN_ECN-DNA" or label == "Whole-Brain_ECN-DNA":
+        
+        # Add legend in the lower left corner
+        plt.legend(loc="lower left", fontsize=11)
+        
+        # Add text box in the upper right containing the R² score
+        stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}\np = {regression_results['p_value']:.4f}"
+        plt.gca().text(0.975, 0.95, stats_text, transform=plt.gca().transAxes,
+                    fontsize=11, verticalalignment='top', horizontalalignment='right',
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
+    elif label == "ECN_ECN-DNB":
+        
+        # Add legend in the upper left corner
+        plt.legend(loc="upper left", fontsize=11)
+        
+        # Add text box in the upper right containing the R² score
+        stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}\np = {regression_results['p_value']:.4f}"
+        plt.gca().text(0.975, 0.95, stats_text, transform=plt.gca().transAxes,
+                    fontsize=11, verticalalignment='top', horizontalalignment='right',
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
+    elif label == "DNA_ECN-DNA":
+        
+        # Add legend in the lower right corner
+        plt.legend(loc="lower right", fontsize=11)
+        
+        # Add text box in the lower left containing the R² score
+        stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}\np = {regression_results['p_value']:.4f}"
+        plt.gca().text(0.025, 0.05, stats_text, transform=plt.gca().transAxes,
+                    fontsize=11, verticalalignment='bottom', horizontalalignment='left',
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
+    else:
+        
+        # Add legend in the lower right corner
+        plt.legend(loc="lower right", fontsize=11)
+        
+        # Add text box in the upper left containing the R² score
+        stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}\np = {regression_results['p_value']:.4f}"
+        plt.gca().text(0.025, 0.95, stats_text, transform=plt.gca().transAxes,
+                    fontsize=11, verticalalignment='top', horizontalalignment='left',
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
+
     # 7. Display the plot window
     plt.tight_layout()
     plot_name = os.path.join(fmri_output_directory, f"Linear_Regression_{label}.png")
     plt.savefig(plot_name, dpi=300)
     plt.show()
+
+
+def plot_vascular_density_swarm(density_array, subjects, fmri_output_directory):
+    """
+    Creates a swarm-style scatter plot showing the vascular density of each brain region
+    across all subjects using only Matplotlib.
+    """
+    plt.figure(figsize=(8, 6), dpi=300)
+    
+    # Define distinct colors for each subject to track them across regions
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
+    regions = list(density_array.keys())  # ["Whole-Brain", "ECN", "DNA", "DNB"]
+
+    # Loop through each brain region (X-axis positions: 0, 1, 2, 3)
+    for x_idx, region in enumerate(regions):
+        densities = density_array[region]
+        
+        # Add a tiny horizontal jitter to prevent overlapping points (Swarm effect)
+        # np.linspace or a small deterministic spread keeps it clean
+        jitter = np.linspace(-0.15, 0.15, len(subjects))
+        
+        for sub_idx, sub in enumerate(subjects):
+            x_pos = x_idx + jitter[sub_idx]
+            y_pos = densities[sub_idx]
+            
+            # Only add the label for the first region so the legend doesn't duplicate
+            label = f"Sub-{sub}" if x_idx == 0 else ""
+            
+            plt.scatter(x_pos, y_pos, color=colors[sub_idx], s=120, edgecolors="k", 
+                        alpha=0.85, zorder=3, label=label)
+
+    # Style the plot
+    plt.xticks(range(len(regions)), regions, fontsize=12, fontweight="normal")
+    plt.ylabel("Vascular Density", fontsize=12, fontweight="normal")
+    plt.grid(True, axis="y", linestyle="--", alpha=0.5, zorder=0)
+    
+    # Place legend outside or neatly inside
+    plt.legend(loc="upper right", frameon=True, facecolor="white", edgecolor="gray")
+    plt.tight_layout()
+    
+    # Save the figure
+    plot_name = os.path.join(fmri_output_directory, "Vascular_Density_Swarm_Plot.png")
+    plt.savefig(plot_name, dpi=300)
+    plt.close()
+    print(f"Swarm plot successfully saved to: {plot_name}\n")
 
 
 def main():
@@ -208,17 +291,20 @@ def main():
         print("====================================")
 
         for k, x in [("ECN", "ecn"), ("DNA", "dna"), ("DNB", "dnb")]:
-                    file_name_network = f'map_{x}_mask_sub-{sub}_vesselres.nii.gz'
-                    full_path_network = os.path.abspath(os.path.join(fmri_output_directory, file_name_network))
+            file_name_network = f'map_{x}_mask_sub-{sub}_vesselres.nii.gz'
+            full_path_network = os.path.abspath(os.path.join(fmri_output_directory, file_name_network))
 
-                    brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_network, full_path_vessel, full_path_brain)
-                    density_array[k].append(vascular_density)
+            brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_network, full_path_vessel, full_path_brain)
+            density_array[k].append(vascular_density)
 
-                    print(f"Subject {sub}")
-                    print(f"{k} Total Voxels : {brain_mask_voxels}")
-                    print(f"{k} Vessel Voxels : {vessel_mask_voxels}")
-                    print(f"Calculated {k} Vascular Density : {vascular_density:.6f}")
-                    print("====================================")
+            print(f"Subject {sub}")
+            print(f"{k} Total Voxels : {brain_mask_voxels}")
+            print(f"{k} Vessel Voxels : {vessel_mask_voxels}")
+            print(f"Calculated {k} Vascular Density : {vascular_density:.6f}")
+            print("====================================")
+
+    # Generate the swarm plot comparing all regions across subjects
+    plot_vascular_density_swarm(density_array, subjects, fmri_output_directory)
 
     # Regression analysis between switching rates and vascular density
     for k in density_array.keys():
@@ -253,7 +339,7 @@ def main():
             y_axis_label="ECN-DNB Switches",
             fmri_output_directory=fmri_output_directory
         )
-
+    
     return 
 
 

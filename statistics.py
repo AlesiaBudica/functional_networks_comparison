@@ -119,7 +119,7 @@ def print_regression_metrics(metrics_dict, label, output_file="regression_result
     return metrics_dict
 
 
-def plot_linear_regression(x, y, regression_results, label, title, fmri_output_directory):
+def plot_linear_regression(x, y, regression_results, label, x_axis_label, y_axis_label, fmri_output_directory):
     """
     Plots the original data points as a scatter plot and overlays 
     the calculated linear regression line.
@@ -132,8 +132,10 @@ def plot_linear_regression(x, y, regression_results, label, title, fmri_output_d
         Original dependent variables (e.g., parcel/network activity).
     regression_results : dict
         The output dictionary from the perform_linear_regression function.
-    title : str, optional
-        The title for the generated plot.
+    x_axis_label : str, optional
+        The label for the x-axis.
+    y_axis_label : str, optional
+        The label for the y-axis.
     """
     # 1. Convert inputs to arrays to ensure they plot cleanly
     x_arr = np.asarray(x)
@@ -162,11 +164,10 @@ def plot_linear_regression(x, y, regression_results, label, title, fmri_output_d
                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
 
     # 6. Labels, grid, and legend styling
-    plt.title(title, fontsize=14, fontweight="bold", pad=15)
-    plt.xlabel("X (Independent Variable)", fontsize=12)
-    plt.ylabel("Y (Dependent Variable)", fontsize=12)
+    plt.xlabel(x_axis_label, fontsize=12)
+    plt.ylabel(y_axis_label, fontsize=12)
     plt.grid(True, linestyle="--", alpha=0.5)
-    plt.legend(loc="lower right", fontsize=11)
+    plt.legend(loc="best", fontsize=11)
     
     # 7. Display the plot window
     plt.tight_layout()
@@ -187,7 +188,7 @@ def main():
     # MRI data processing for vascular density
     vessel_segmentation_directory = "/data/vessels/manualsegready/"
    
-    density_array = {"brain": [], "ecn": [], "dna": [], "dnb": []}
+    density_array = {"Whole-Brain": [], "ECN": [], "DNA": [], "DNB": []}
 
     print("====================================")
 
@@ -198,15 +199,15 @@ def main():
         full_path_vessel = os.path.abspath(os.path.join(vessel_segmentation_directory, file_name_vessel))
         
         brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_brain, full_path_vessel)
-        density_array["brain"].append(vascular_density)
+        density_array["Whole-Brain"].append(vascular_density)
 
         print(f"Subject {sub}")
-        print(f"Total Brain Voxels : {brain_mask_voxels}")
-        print(f"Total Vessel Voxels : {vessel_mask_voxels}")
+        print(f"Whole-Brain Total Voxels : {brain_mask_voxels}")
+        print(f"Whole-Brain Vessel Voxels : {vessel_mask_voxels}")
         print(f"Calculated Whole-Brain Vascular Density : {vascular_density:.6f}")
         print("====================================")
 
-        for k in ["ecn", "dna", "dnb"]:
+        for k in ["ECN", "DNA", "DNB"]:
             file_name_network = f'map_{k}_mask_sub-{sub}_vesselres.nii.gz'
             full_path_network = os.path.abspath(os.path.join(fmri_output_directory, file_name_network))
 
@@ -214,8 +215,8 @@ def main():
             density_array[k].append(vascular_density)
 
             print(f"Subject {sub}")
-            print(f"Total {k} Voxels : {brain_mask_voxels}")
-            print(f"Total Vessel Voxels : {vessel_mask_voxels}")
+            print(f"{k} Total Voxels : {brain_mask_voxels}")
+            print(f"{k} Vessel Voxels : {vessel_mask_voxels}")
             print(f"Calculated {k} Vascular Density : {vascular_density:.6f}")
             print("====================================")
 
@@ -225,12 +226,12 @@ def main():
         metrics_ecn_dnb = perform_linear_regression(density_array[k], rate_ecn_dnb_array)
         print_regression_metrics(
             metrics_ecn_dna,
-            label=f"{k} density vs ECN-DNA",
+            label=f"{k} Vessel Density vs ECN-DNA",
             output_file=os.path.abspath(os.path.join(fmri_output_directory, f"{k}_ecn-dna_regression.txt")),
         )
         print_regression_metrics(
             metrics_ecn_dnb,
-            label=f"{k} density vs ECN-DNB",
+            label=f"{k} Vessel Density vs ECN-DNB",
             output_file=os.path.abspath(os.path.join(fmri_output_directory, f"{k}_ecn-dnb_regression.txt")),
         )
 
@@ -239,7 +240,8 @@ def main():
             rate_ecn_dna_array,
             metrics_ecn_dna,
             label=f"{k}_ECN-DNA",
-            title=f"Linear Regression: {k} Density vs ECN-DNA Switching Rate",
+            x_axis_label=f"{k} Vessel Density",
+            y_axis_label="ECN-DNA Switches",
             fmri_output_directory=fmri_output_directory
         )
         plot_linear_regression(
@@ -247,7 +249,8 @@ def main():
             rate_ecn_dnb_array,
             metrics_ecn_dnb,
             label=f"{k}_ECN-DNB",
-            title=f"Linear Regression: {k} Density vs ECN-DNB Switching Rate",
+            x_axis_label=f"{k} Vessel Density",
+            y_axis_label="ECN-DNB Switches",
             fmri_output_directory=fmri_output_directory
         )
 

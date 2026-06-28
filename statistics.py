@@ -167,7 +167,7 @@ def plot_linear_regression(x, y, regression_results, label, x_axis_label, y_axis
     plt.xlabel(x_axis_label, fontsize=12)
     plt.ylabel(y_axis_label, fontsize=12)
     plt.grid(True, linestyle="--", alpha=0.5)
-    plt.legend(loc="best", fontsize=11)
+    plt.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=11)
     
     # 7. Display the plot window
     plt.tight_layout()

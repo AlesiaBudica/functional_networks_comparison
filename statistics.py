@@ -85,6 +85,7 @@ def perform_linear_regression(x, y):
         "intercept": intercept,
         "r_squared": r_squared,
         "rmse": rmse,
+        "p_value": p_value,
         "predictions": y_pred
     }
 

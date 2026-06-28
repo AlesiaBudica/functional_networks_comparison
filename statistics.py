@@ -208,17 +208,18 @@ def main():
         print("====================================")
 
         for k in ["ECN", "DNA", "DNB"]:
-            file_name_network = f'map_{k}_mask_sub-{sub}_vesselres.nii.gz'
-            full_path_network = os.path.abspath(os.path.join(fmri_output_directory, file_name_network))
+                for x in ["ecn", "dna", "dnb"]:
+                    file_name_network = f'map_{x}_mask_sub-{sub}_vesselres.nii.gz'
+                    full_path_network = os.path.abspath(os.path.join(fmri_output_directory, file_name_network))
 
-            brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_network, full_path_vessel, full_path_brain)
-            density_array[k].append(vascular_density)
+                    brain_mask_voxels, vessel_mask_voxels, vascular_density = density(full_path_network, full_path_vessel, full_path_brain)
+                    density_array[k].append(vascular_density)
 
-            print(f"Subject {sub}")
-            print(f"{k} Total Voxels : {brain_mask_voxels}")
-            print(f"{k} Vessel Voxels : {vessel_mask_voxels}")
-            print(f"Calculated {k} Vascular Density : {vascular_density:.6f}")
-            print("====================================")
+                    print(f"Subject {sub}")
+                    print(f"{k} Total Voxels : {brain_mask_voxels}")
+                    print(f"{k} Vessel Voxels : {vessel_mask_voxels}")
+                    print(f"Calculated {k} Vascular Density : {vascular_density:.6f}")
+                    print("====================================")
 
     # Regression analysis between switching rates and vascular density
     for k in density_array.keys():

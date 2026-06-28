@@ -207,8 +207,7 @@ def main():
         print(f"Calculated Whole-Brain Vascular Density : {vascular_density:.6f}")
         print("====================================")
 
-        for k in ["ECN", "DNA", "DNB"]:
-                for x in ["ecn", "dna", "dnb"]:
+        for k, x in [("ECN", "ecn"), ("DNA", "dna"), ("DNB", "dnb")]:
                     file_name_network = f'map_{x}_mask_sub-{sub}_vesselres.nii.gz'
                     full_path_network = os.path.abspath(os.path.join(fmri_output_directory, file_name_network))
 

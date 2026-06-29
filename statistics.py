@@ -332,7 +332,7 @@ def main():
             metrics_ecn_dna,
             label=f"{k}_ECN-DNA",
             x_axis_label=f"{k} Vessel Density (%)",
-            y_axis_label="ECN-DNA Switch Count",
+            y_axis_label="ECN-DNA Switching Rate",
             fmri_output_directory=fmri_output_directory
         )
         plot_linear_regression(
@@ -341,7 +341,7 @@ def main():
             metrics_ecn_dnb,
             label=f"{k}_ECN-DNB",
             x_axis_label=f"{k} Vessel Density (%)",
-            y_axis_label="ECN-DNB Switch Count",
+            y_axis_label="ECN-DNB Switching Rate (switches/sec)",
             fmri_output_directory=fmri_output_directory
         )
     

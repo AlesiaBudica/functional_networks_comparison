@@ -99,9 +99,9 @@ def maps_and_rates(in_file, seed_location_ecn, seed_location_dna, seed_location_
     ng.export_nifti(map_dnb_mask, img, map_dnb_mask_file_path)
     print(f"Success! Map DNB saved to: {map_dnb_file_path}")
 
-    rate_ecn_dna = np.count_nonzero((pp_seed_data_ecn[:-1] + pp_seed_data_dna[1:]) == 2)
-    rate_ecn_dnb = np.count_nonzero((pp_seed_data_ecn[:-1] + pp_seed_data_dnb[1:]) == 2)
-    
+    rate_ecn_dna = np.count_nonzero((pp_seed_data_ecn[:-1] + pp_seed_data_dna[1:]) == 2) / (pp_seed_data_ecn.size - 1)
+    rate_ecn_dnb = np.count_nonzero((pp_seed_data_ecn[:-1] + pp_seed_data_dnb[1:]) == 2) / (pp_seed_data_ecn.size - 1)
+
     return rate_ecn_dna, rate_ecn_dnb, seed_data_ecn, seed_data_dna, seed_data_dnb, pp_seed_data_ecn, pp_seed_data_dna, pp_seed_data_dnb
 
 

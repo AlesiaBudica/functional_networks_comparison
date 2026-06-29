@@ -170,37 +170,17 @@ def plot_linear_regression(x, y, regression_results, label, x_axis_label, y_axis
     plt.gca().xaxis.set_major_formatter(ticker.FormatStrFormatter("%.2f"))
     plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
    
-    if label == "DNB_ECN-DNA" or label == "ECN_ECN-DNA" or label == "Whole-Brain_ECN-DNA":
-        
-        # Add legend in the lower left corner
-        plt.legend(loc="lower left", fontsize=11)
-        
-        # Add text box in the upper right containing the R² score
-        stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}\np = {regression_results['p_value']:.4f}"
-        plt.gca().text(0.975, 0.95, stats_text, transform=plt.gca().transAxes,
-                    fontsize=11, verticalalignment='top', horizontalalignment='right',
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
-    elif label == "ECN_ECN-DNB":
-        
-        # Add legend in the upper left corner
-        plt.legend(loc="upper left", fontsize=11)
-        
-        # Add text box in the upper right containing the R² score
-        stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}\np = {regression_results['p_value']:.4f}"
-        plt.gca().text(0.975, 0.95, stats_text, transform=plt.gca().transAxes,
-                    fontsize=11, verticalalignment='top', horizontalalignment='right',
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
-    elif label == "DNA_ECN-DNA":
+    if label == "DNA_D_DNB_I" or label == "ECN_D_DNB_I" or label == "ECN_D_DNB_I":
         
         # Add legend in the lower right corner
         plt.legend(loc="lower right", fontsize=11)
         
-        # Add text box in the lower left containing the R² score
+        # Add text box in the upper right containing the R² score
         stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}\np = {regression_results['p_value']:.4f}"
-        plt.gca().text(0.025, 0.05, stats_text, transform=plt.gca().transAxes,
-                    fontsize=11, verticalalignment='bottom', horizontalalignment='left',
+        plt.gca().text(0.975, 0.95, stats_text, transform=plt.gca().transAxes,
+                    fontsize=11, verticalalignment='top', horizontalalignment='right',
                     bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
-    else:
+    elif label == "DNB_D_DNB_I":
         
         # Add legend in the lower right corner
         plt.legend(loc="lower right", fontsize=11)
@@ -209,6 +189,16 @@ def plot_linear_regression(x, y, regression_results, label, x_axis_label, y_axis
         stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}\np = {regression_results['p_value']:.4f}"
         plt.gca().text(0.025, 0.95, stats_text, transform=plt.gca().transAxes,
                     fontsize=11, verticalalignment='top', horizontalalignment='left',
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
+    else:
+        
+        # Add legend in the lower left corner
+        plt.legend(loc="lower left", fontsize=11)
+        
+        # Add text box in the upper right containing the R² score
+        stats_text = f"$R^2$ = {r_2:.3f}\nRMSE = {regression_results['rmse']:.3f}\np = {regression_results['p_value']:.4f}"
+        plt.gca().text(0.975, 0.95, stats_text, transform=plt.gca().transAxes,
+                    fontsize=11, verticalalignment='top', horizontalalignment='right',
                     bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
     
     # 7. Display the plot window
@@ -264,6 +254,49 @@ def plot_vascular_density_swarm(density_array, subjects, fmri_output_directory):
     print(f"Swarm plot successfully saved to: {plot_name}\n")
 
 
+def plot_interference_rate_swarm(rate_ecn_dna_array, rate_ecn_dnb_array, subjects, fmri_output_directory):
+    """
+    Creates a swarm-style scatter plot comparing the interference rates (switches per ECN activation)
+    between the DNA group and the DNB group across all subjects using only Matplotlib.
+    """
+    plt.figure(figsize=(6, 5), dpi=300)
+    
+    # Persistent color mapping for your 6 subjects
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
+    groups = ["DNA", "DNB"]
+    data_groups = [rate_ecn_dna_array, rate_ecn_dnb_array]
+
+    # Loop through the two groups (X positions: 0 and 1)
+    for x_idx, group_data in enumerate(data_groups):
+        # Controlled horizontal jitter to separate the data points nicely
+        jitter = np.linspace(-0.15, 0.15, len(subjects))
+        
+        for sub_idx, sub in enumerate(subjects):
+            x_pos = x_idx + jitter[sub_idx]
+            y_pos = group_data[sub_idx]
+            
+            # Label only the first group to keep the legend from repeating entries
+            label = f"Sub-{sub}" if x_idx == 0 else ""
+            
+            plt.scatter(x_pos, y_pos, color=colors[sub_idx], s=130, edgecolors="k", 
+                        alpha=0.85, zorder=3, label=label)
+
+    # Styling the chart
+    plt.xticks([0, 1], groups, fontsize=12, fontweight="normal")
+    plt.ylabel("Interference Rate", fontsize=12, fontweight="normal")
+    plt.grid(True, axis="y", linestyle="--", alpha=0.5, zorder=0)
+    
+    # Neatly place the single subject legend
+    plt.legend(loc="upper right", frameon=True, facecolor="white", edgecolor="gray")
+    plt.tight_layout()
+    
+    # Save the figure
+    plot_name = os.path.join(fmri_output_directory, "Interference_Rate_Swarm_Plot.png")
+    plt.savefig(plot_name, dpi=300)
+    plt.close()
+    print(f"Interference rate swarm plot successfully saved to: {plot_name}\n")
+
+
 def main():
 
     fmri_output_directory = "/data/func_net_comp"
@@ -308,8 +341,11 @@ def main():
             print(f"Calculated {k} Vessel Density : {vascular_density:.6f}")
             print("====================================")
 
-    # Generate the swarm plot comparing all regions across subjects
+    # Generate the swarm plot comparing all regions/interferences across subjects
     plot_vascular_density_swarm(density_array, subjects, fmri_output_directory)
+
+    # Generate the swarm plot comparing DNA vs DNB interference rates across subjects
+    plot_interference_rate_swarm(rate_ecn_dna_array, rate_ecn_dnb_array, subjects, fmri_output_directory)
 
     # Regression analysis between switching rates and vascular density
     for k in density_array.keys():
@@ -317,12 +353,12 @@ def main():
         metrics_ecn_dnb = perform_linear_regression(density_array[k], rate_ecn_dnb_array)
         print_regression_metrics(
             metrics_ecn_dna,
-            label=f"{k} Vessel Density vs ECN-DNA",
+            label=f"{k} Vessel Density vs DNA Interference",
             output_file=os.path.abspath(os.path.join(fmri_output_directory, f"{k}_ecn-dna_regression.txt")),
         )
         print_regression_metrics(
             metrics_ecn_dnb,
-            label=f"{k} Vessel Density vs ECN-DNB",
+            label=f"{k} Vessel Density vs DNB Interference",
             output_file=os.path.abspath(os.path.join(fmri_output_directory, f"{k}_ecn-dnb_regression.txt")),
         )
 
@@ -330,21 +366,21 @@ def main():
             density_array[k],
             rate_ecn_dna_array,
             metrics_ecn_dna,
-            label=f"{k}_ECN-DNA",
+            label=f"{k}_D_DNA_I",
             x_axis_label=f"{k} Vessel Density (%)",
-            y_axis_label="ECN-DNA Switching Rate",
+            y_axis_label="DNA Interference Rate", 
             fmri_output_directory=fmri_output_directory
         )
         plot_linear_regression(
             density_array[k],
             rate_ecn_dnb_array,
             metrics_ecn_dnb,
-            label=f"{k}_ECN-DNB",
+            label=f"{k}_D_DNB_I",
             x_axis_label=f"{k} Vessel Density (%)",
-            y_axis_label="ECN-DNB Switching Rate (switches/sec)",
+            y_axis_label="DNB Interference Rate", 
             fmri_output_directory=fmri_output_directory
         )
-    
+
     return 
 
 

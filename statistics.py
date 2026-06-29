@@ -3,6 +3,7 @@
 import os
 
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 from scipy import stats
 from statsmodels.iolib.table import SimpleTable
@@ -23,7 +24,7 @@ def density(brain_mask_path, vessel_mask_path, wholebrain_mask=None):
     vessel_inside_brain = vessel_mask * brain_mask
     vessel_mask_voxels = np.sum(vessel_inside_brain)
 
-    vascular_density = vessel_mask_voxels / brain_mask_voxels
+    vascular_density = vessel_mask_voxels / brain_mask_voxels * 100
 
     return brain_mask_voxels, vessel_mask_voxels, vascular_density
 
@@ -154,7 +155,7 @@ def plot_linear_regression(x, y, regression_results, label, x_axis_label, y_axis
     plt.figure(figsize=(8, 5), dpi=300)
 
     # 3. Scatter plot for the actual raw data points
-    plt.scatter(x_arr, y_arr, color="darkblue", alpha=0.7, edgecolors="k", s=80, label="Actual Data")
+    plt.scatter(x_arr, y_arr, color="darkblue", alpha=0.7, edgecolors="k", s=80, label="Subject Data")
 
     # 4. Line plot for the predicted linear regression line
     # Sorting x makes sure the line draws smoothly from left to right
@@ -166,6 +167,8 @@ def plot_linear_regression(x, y, regression_results, label, x_axis_label, y_axis
     plt.xlabel(x_axis_label, fontsize=12)
     plt.ylabel(y_axis_label, fontsize=12)
     plt.grid(True, linestyle="--", alpha=0.5)
+    plt.gca().xaxis.set_major_formatter(ticker.FormatStrFormatter("%.2f"))
+    plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
    
     if label == "DNB_ECN-DNA" or label == "ECN_ECN-DNA" or label == "Whole-Brain_ECN-DNA":
         
@@ -207,7 +210,7 @@ def plot_linear_regression(x, y, regression_results, label, x_axis_label, y_axis
         plt.gca().text(0.025, 0.95, stats_text, transform=plt.gca().transAxes,
                     fontsize=11, verticalalignment='top', horizontalalignment='left',
                     bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.8))
-
+    
     # 7. Display the plot window
     plt.tight_layout()
     plot_name = os.path.join(fmri_output_directory, f"Linear_Regression_{label}.png")
@@ -246,8 +249,9 @@ def plot_vascular_density_swarm(density_array, subjects, fmri_output_directory):
 
     # Style the plot
     plt.xticks(range(len(regions)), regions, fontsize=12, fontweight="normal")
-    plt.ylabel("Vascular Density", fontsize=12, fontweight="normal")
+    plt.ylabel("Vessel Density (%)", fontsize=12, fontweight="normal")
     plt.grid(True, axis="y", linestyle="--", alpha=0.5, zorder=0)
+    plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%.2f"))
     
     # Place legend outside or neatly inside
     plt.legend(loc="upper right", frameon=True, facecolor="white", edgecolor="gray")
@@ -288,7 +292,7 @@ def main():
         print(f"Subject {sub}")
         print(f"Whole-Brain Total Voxels : {brain_mask_voxels}")
         print(f"Whole-Brain Vessel Voxels : {vessel_mask_voxels}")
-        print(f"Calculated Whole-Brain Vascular Density : {vascular_density:.6f}")
+        print(f"Calculated Whole-Brain Vessel Density : {vascular_density:.6f}")
         print("====================================")
 
         for k, x in [("ECN", "ecn"), ("DNA", "dna"), ("DNB", "dnb")]:
@@ -301,7 +305,7 @@ def main():
             print(f"Subject {sub}")
             print(f"{k} Total Voxels : {brain_mask_voxels}")
             print(f"{k} Vessel Voxels : {vessel_mask_voxels}")
-            print(f"Calculated {k} Vascular Density : {vascular_density:.6f}")
+            print(f"Calculated {k} Vessel Density : {vascular_density:.6f}")
             print("====================================")
 
     # Generate the swarm plot comparing all regions across subjects
@@ -327,8 +331,8 @@ def main():
             rate_ecn_dna_array,
             metrics_ecn_dna,
             label=f"{k}_ECN-DNA",
-            x_axis_label=f"{k} Vessel Density",
-            y_axis_label="ECN-DNA Switches",
+            x_axis_label=f"{k} Vessel Density (%)",
+            y_axis_label="ECN-DNA Switch Count",
             fmri_output_directory=fmri_output_directory
         )
         plot_linear_regression(
@@ -336,8 +340,8 @@ def main():
             rate_ecn_dnb_array,
             metrics_ecn_dnb,
             label=f"{k}_ECN-DNB",
-            x_axis_label=f"{k} Vessel Density",
-            y_axis_label="ECN-DNB Switches",
+            x_axis_label=f"{k} Vessel Density (%)",
+            y_axis_label="ECN-DNB Switch Count",
             fmri_output_directory=fmri_output_directory
         )
     
